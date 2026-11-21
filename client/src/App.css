@@ -60,7 +60,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 220px;
+  max-height: 240px;
   overflow-y: auto;
 }
 
@@ -74,12 +74,20 @@ body {
 .history-top {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
   margin-bottom: 3px;
   color: #f8fafc;
 }
 
 .history-top span {
   color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.history-meta {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 4px;
 }
 
 .history-scores {
@@ -183,6 +191,12 @@ h1, h2 {
   background: transparent;
   color: #cbd5e1;
   border: 1px solid var(--border-soft);
+}
+
+.btn-danger {
+  background: rgba(239, 68, 68, 0.22);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.45);
 }
 
 .btn-pass {
@@ -369,8 +383,9 @@ h1, h2 {
 
 .top-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 8px;
 }
 

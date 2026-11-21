@@ -93,24 +93,24 @@ export default function Lobby({
 
         <div className="section-title">House Rules</div>
         <div className="settings-box">
-          <label className="setting-item">
+          <div className="setting-item">
             <div>
               <strong>Allow Strategic Pass</strong>
               <div className="setting-hint">
-                If off, you can only pass when you have no valid card.
+                Off by default: you must play if you have a valid card.
               </div>
             </div>
             <input
               type="checkbox"
               disabled={!isHost}
-              checked={room.settings.strategicPass}
+              checked={Boolean(room.settings.strategicPass)}
               onChange={(e) =>
                 onUpdateSettings({ strategicPass: e.target.checked })
               }
             />
-          </label>
+          </div>
 
-          <label className="setting-item">
+          <div className="setting-item">
             <div>
               <strong>Scoring Mode</strong>
               <div className="setting-hint">Points counted for leftover cards</div>
@@ -126,7 +126,7 @@ export default function Lobby({
               <option value="standard">Standard (A=1..K=13)</option>
               <option value="face10">Face Cards = 10 (J/Q/K=10)</option>
             </select>
-          </label>
+          </div>
         </div>
 
         {isHost ? (

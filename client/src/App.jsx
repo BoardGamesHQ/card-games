@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { socket } from './socket.js';
-import { playReactionSound } from './sound.js';
+import { playReactionSound, playWinSound } from './sound.js';
 import Home from './components/Home.jsx';
 import Lobby from './components/Lobby.jsx';
 import BadaamSaatTable from './components/BadaamSaatTable.jsx';
@@ -27,6 +27,19 @@ function loadHistory() {
   }
 }
 
+function formatNow(ts = Date.now()) {
+  try {
+    return new Date(ts).toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
+}
+
 export default function App() {
   const playerId = useMemo(getOrCreatePlayerId, []);
   const [initialCode] = useState(getRoomCodeFromUrl);
@@ -37,19 +50,49 @@ export default function App() {
   const [error, setError] = useState('');
   const [reactions, setReactions] = useState([]);
   const [history, setHistory] = useState(loadHistory);
+  const [endedMatch, setEndedMatch] = useState(null);
   const lastSavedRoundRef = useRef('');
 
   useEffect(() => {
     const onRoomState = (nextRoom) => {
       setError('');
+      setEndedMatch(null);
       setRoom(nextRoom);
       window.history.replaceState(null, '', `/room/${nextRoom.code}`);
     };
 
     const onKicked = ({ message }) => {
+      sessionStorage.removeItem('card_arena_room');
       setRoom(null);
       setError(message);
       window.history.replaceState(null, '', '/');
+    };
+
+    const onMatchEnded = (summary) => {
+      playWinSound();
+      sessionStorage.removeItem('card_arena_room');
+      setRoom(null);
+      setEndedMatch(summary);
+      window.history.replaceState(null, '', '/');
+
+      const entry = {
+        id: `match-${summary.roomCode}-${summary.endedAt}`,
+        kind: 'match',
+        roomCode: summary.roomCode,
+        roundsPlayed: summary.roundsPlayed,
+        playedAt: formatNow(summary.endedAt),
+        winner: summary.winnerName,
+        standings: summary.standings.map((s) => ({
+          name: s.name,
+          totalScore: s.totalScore,
+        })),
+      };
+
+      setHistory((prev) => {
+        const next = [entry, ...prev].slice(0, 40);
+        localStorage.setItem('card_arena_history', JSON.stringify(next));
+        return next;
+      });
     };
 
     const onReaction = (reaction) => {
@@ -62,6 +105,7 @@ export default function App() {
 
     socket.on('room_state', onRoomState);
     socket.on('kicked', onKicked);
+    socket.on('match_ended', onMatchEnded);
     socket.on('reaction', onReaction);
 
     const activeCode = sessionStorage.getItem('card_arena_room') || initialCode;
@@ -81,6 +125,7 @@ export default function App() {
     return () => {
       socket.off('room_state', onRoomState);
       socket.off('kicked', onKicked);
+      socket.off('match_ended', onMatchEnded);
       socket.off('reaction', onReaction);
     };
   }, [initialCode, playerId]);
@@ -97,8 +142,11 @@ export default function App() {
     const winner = room.players.find((p) => p.id === g.winnerId)?.name || 'Winner';
     const entry = {
       id: key,
+      kind: 'round',
       roomCode: room.code,
       roundNumber: g.roundNumber,
+      roundsPlayed: g.roundNumber,
+      playedAt: formatNow(),
       winner,
       standings: g.roundSummary.map((s) => ({
         name: s.name,
@@ -107,7 +155,7 @@ export default function App() {
     };
 
     setHistory((prev) => {
-      const next = [entry, ...prev.filter((x) => x.id !== key)].slice(0, 30);
+      const next = [entry, ...prev.filter((x) => x.id !== key)].slice(0, 40);
       localStorage.setItem('card_arena_history', JSON.stringify(next));
       return next;
     });
@@ -149,15 +197,46 @@ export default function App() {
 
   if (!room) {
     return (
-      <Home
-        initialCode={initialCode}
-        savedName={savedName}
-        history={history}
-        onClearHistory={handleClearHistory}
-        onCreateRoom={handleCreateRoom}
-        onJoinRoom={handleJoinRoom}
-        error={error}
-      />
+      <>
+        <Home
+          initialCode={initialCode}
+          savedName={savedName}
+          history={history}
+          onClearHistory={handleClearHistory}
+          onCreateRoom={handleCreateRoom}
+          onJoinRoom={handleJoinRoom}
+          error={error}
+        />
+        {endedMatch && (
+          <div className="modal-backdrop">
+            <div className="panel modal-panel">
+              <h2>🏆 Match Ended — {endedMatch.winnerName} Wins!</h2>
+              <p className="subtitle">
+                Room {endedMatch.roomCode} • {endedMatch.roundsPlayed} round(s) played
+              </p>
+              <div className="summary-table">
+                {endedMatch.standings.map((row, idx) => (
+                  <div key={row.playerId} className="summary-row">
+                    <strong>
+                      #{idx + 1} {row.name}
+                    </strong>
+                    <div className="summary-points">
+                      <span>{row.totalScore} pts</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+                onClick={() => setEndedMatch(null)}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -204,6 +283,8 @@ export default function App() {
       }
       onNextRound={() => socket.emit('next_round', { code: room.code, playerId })}
       onBackToLobby={() => socket.emit('back_to_lobby', { code: room.code, playerId })}
+      onEndMatch={() => socket.emit('end_match', { code: room.code, playerId })}
+      onLeaveRoom={handleLeaveRoom}
       onSendReaction={(emoji) =>
         socket.emit('send_reaction', { code: room.code, playerId, emoji })
       }

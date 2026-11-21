@@ -8,6 +8,7 @@ import { GAMES } from './games/index.js';
 import {
   cleanupOldRooms,
   createRoom,
+  deleteRoom,
   emitRoomState,
   findPlayerBySocket,
   getRoom,
@@ -139,6 +140,34 @@ io.on('connection', (socket) => {
     emitRoomState(io, room);
   });
 
+  socket.on('end_match', ({ code, playerId }) => {
+    const room = getRoom(code);
+    if (!room || room.hostId !== playerId) return;
+
+    const standings = room.players
+      .map((p) => ({
+        playerId: p.id,
+        name: p.name,
+        totalScore: room.scores[p.id] || 0,
+      }))
+      .sort((a, b) => a.totalScore - b.totalScore);
+
+    io.to(room.code).emit('match_ended', {
+      roomCode: room.code,
+      roundsPlayed: room.gameState?.roundNumber || 0,
+      endedAt: Date.now(),
+      winnerName: standings[0]?.name || 'Winner',
+      standings,
+    });
+
+    room.players.forEach((p) => {
+      if (p.socketId) {
+        io.sockets.sockets.get(p.socketId)?.leave(room.code);
+      }
+    });
+    deleteRoom(room.code);
+  });
+
   socket.on('send_reaction', ({ code, playerId, emoji }) => {
     const room = getRoom(code);
     if (!room) return;
@@ -160,6 +189,14 @@ io.on('connection', (socket) => {
       room.players = room.players.filter((p) => p.id !== playerId);
       if (room.hostId === playerId && room.players.length > 0) {
         room.hostId = room.players[0].id;
+      }
+      if (room.players.length === 0) deleteRoom(room.code);
+      else emitRoomState(io, room);
+    } else {
+      const p = room.players.find((pl) => pl.id === playerId);
+      if (p) {
+        p.connected = false;
+        p.socketId = null;
       }
       emitRoomState(io, room);
     }

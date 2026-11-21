@@ -105,21 +105,26 @@ export default function Home({
           <div className="panel history-panel">
             <div className="history-header">
               <span className="section-title" style={{ margin: 0 }}>
-                Recent Match History (This Device)
+                Past Games ({history.length})
               </span>
               <button className="btn btn-ghost btn-xs" onClick={onClearHistory}>
                 Clear
               </button>
             </div>
             <div className="history-list">
-              {history.slice(0, 8).map((item) => (
+              {history.map((item) => (
                 <div key={item.id} className="history-item">
                   <div className="history-top">
-                    <strong>🏆 {item.winner}</strong>
-                    <span>Room {item.roomCode} • Rd {item.roundNumber}</span>
+                    <strong>
+                      🏆 {item.winner} ({item.kind === 'match' ? 'Match Winner' : `Rd ${item.roundNumber}`})
+                    </strong>
+                    <span>{item.playedAt || `Room ${item.roomCode}`}</span>
+                  </div>
+                  <div className="history-meta">
+                    Room {item.roomCode} • {item.roundsPlayed || item.roundNumber} round(s) • {item.standings.length} players
                   </div>
                   <div className="history-scores">
-                    {item.standings.map((s) => `${s.name}: ${s.totalScore}`).join(' | ')}
+                    {item.standings.map((s) => `${s.name}: ${s.totalScore} pts`).join('  •  ')}
                   </div>
                 </div>
               ))}

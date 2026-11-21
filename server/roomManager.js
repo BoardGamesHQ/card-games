@@ -88,6 +88,10 @@ export function getRoom(code) {
   return rooms.get(code);
 }
 
+export function deleteRoom(code) {
+  rooms.delete(code);
+}
+
 export function findPlayerBySocket(socketId) {
   for (const room of rooms.values()) {
     const player = room.players.find((p) => p.socketId === socketId);

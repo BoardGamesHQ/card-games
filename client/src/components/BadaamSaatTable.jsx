@@ -47,6 +47,8 @@ export default function BadaamSaatTable({
   onPass,
   onNextRound,
   onBackToLobby,
+  onEndMatch,
+  onLeaveRoom,
   onSendReaction,
 }) {
   const game = room.game;
@@ -92,14 +94,39 @@ export default function BadaamSaatTable({
         <div className="top-meta">
           <span className="pill">Room {room.code}</span>
           <span className="pill">Round {game.roundNumber}</span>
+          {room.settings?.strategicPass && (
+            <span className="pill">Strategic Pass ON</span>
+          )}
           <button className="btn btn-ghost btn-xs" onClick={toggleMute}>
             {muted ? '🔇 Muted' : '🔊 Sound'}
           </button>
           {isHost && (
-            <button className="btn btn-ghost btn-xs" onClick={onBackToLobby}>
-              Lobby
-            </button>
+            <>
+              <button className="btn btn-ghost btn-xs" onClick={onBackToLobby}>
+                Lobby
+              </button>
+              <button
+                className="btn btn-danger btn-xs"
+                onClick={() => {
+                  if (window.confirm('End this room and show final match scores?')) {
+                    onEndMatch();
+                  }
+                }}
+              >
+                End Match
+              </button>
+            </>
           )}
+          <button
+            className="btn btn-ghost btn-xs"
+            onClick={() => {
+              if (window.confirm('Leave this game room?')) {
+                onLeaveRoom();
+              }
+            }}
+          >
+            Leave
+          </button>
         </div>
 
         <div className="players-strip">
@@ -238,12 +265,8 @@ export default function BadaamSaatTable({
               ))}
             </div>
 
-            {isMyTurn && (
-              <button
-                className="btn btn-pass btn-sm"
-                disabled={!game.canPass}
-                onClick={onPass}
-              >
+            {isMyTurn && game.canPass && (
+              <button className="btn btn-pass btn-sm" onClick={onPass}>
                 Pass Turn
               </button>
             )}
@@ -302,9 +325,14 @@ export default function BadaamSaatTable({
             </div>
 
             {isHost ? (
-              <button className="btn btn-primary" onClick={onNextRound}>
-                Deal Round {game.roundNumber + 1}
-              </button>
+              <div className="stack-gap">
+                <button className="btn btn-primary" onClick={onNextRound}>
+                  Deal Round {game.roundNumber + 1}
+                </button>
+                <button className="btn btn-ghost" onClick={onEndMatch}>
+                  End Match & Save Final Scores
+                </button>
+              </div>
             ) : (
               <div className="waiting-note">Waiting for host to deal next round...</div>
             )}

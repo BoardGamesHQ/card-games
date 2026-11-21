@@ -27,7 +27,6 @@ export function playCardSound() {
     if (!ac) return;
     const now = ac.currentTime;
 
-    // Crisp card flick (short filtered noise)
     const bufferSize = Math.floor(ac.sampleRate * 0.045);
     const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
     const data = buffer.getChannelData(0);
@@ -50,7 +49,6 @@ export function playCardSound() {
     gain.connect(ac.destination);
     noise.start(now);
 
-    // Soft table thud
     const osc = ac.createOscillator();
     const oscGain = ac.createGain();
     osc.type = 'triangle';

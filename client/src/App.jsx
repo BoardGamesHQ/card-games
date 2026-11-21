@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { socket } from './socket.js';
+import { playReactionSound } from './sound.js';
 import Home from './components/Home.jsx';
 import Lobby from './components/Lobby.jsx';
 import BadaamSaatTable from './components/BadaamSaatTable.jsx';
@@ -18,6 +19,14 @@ function getRoomCodeFromUrl() {
   return match ? match[1].toUpperCase() : '';
 }
 
+function loadHistory() {
+  try {
+    return JSON.parse(localStorage.getItem('card_arena_history') || '[]');
+  } catch {
+    return [];
+  }
+}
+
 export default function App() {
   const playerId = useMemo(getOrCreatePlayerId, []);
   const [initialCode] = useState(getRoomCodeFromUrl);
@@ -27,6 +36,8 @@ export default function App() {
   const [room, setRoom] = useState(null);
   const [error, setError] = useState('');
   const [reactions, setReactions] = useState([]);
+  const [history, setHistory] = useState(loadHistory);
+  const lastSavedRoundRef = useRef('');
 
   useEffect(() => {
     const onRoomState = (nextRoom) => {
@@ -42,6 +53,7 @@ export default function App() {
     };
 
     const onReaction = (reaction) => {
+      playReactionSound();
       setReactions((prev) => [...prev.filter((r) => r.playerId !== reaction.playerId), reaction]);
       setTimeout(() => {
         setReactions((prev) => prev.filter((r) => r.id !== reaction.id));
@@ -73,6 +85,34 @@ export default function App() {
     };
   }, [initialCode, playerId]);
 
+  useEffect(() => {
+    if (!room?.game?.roundSummary) return;
+    const g = room.game;
+    const key = `${room.code}-R${g.roundNumber}-${g.winnerId}-${g.roundSummary
+      .map((s) => s.totalScore)
+      .join(',')}`;
+    if (lastSavedRoundRef.current === key) return;
+    lastSavedRoundRef.current = key;
+
+    const winner = room.players.find((p) => p.id === g.winnerId)?.name || 'Winner';
+    const entry = {
+      id: key,
+      roomCode: room.code,
+      roundNumber: g.roundNumber,
+      winner,
+      standings: g.roundSummary.map((s) => ({
+        name: s.name,
+        totalScore: s.totalScore,
+      })),
+    };
+
+    setHistory((prev) => {
+      const next = [entry, ...prev.filter((x) => x.id !== key)].slice(0, 30);
+      localStorage.setItem('card_arena_history', JSON.stringify(next));
+      return next;
+    });
+  }, [room]);
+
   const handleCreateRoom = (name) => {
     sessionStorage.setItem('card_arena_name', name);
     setSavedName(name);
@@ -102,11 +142,18 @@ export default function App() {
     window.history.replaceState(null, '', '/');
   };
 
+  const handleClearHistory = () => {
+    localStorage.removeItem('card_arena_history');
+    setHistory([]);
+  };
+
   if (!room) {
     return (
       <Home
         initialCode={initialCode}
         savedName={savedName}
+        history={history}
+        onClearHistory={handleClearHistory}
         onCreateRoom={handleCreateRoom}
         onJoinRoom={handleJoinRoom}
         error={error}

@@ -14,6 +14,7 @@ export default function PlayingCard({
   dimmed = false,
   compact = false,
   highlightSeven = false,
+  suitGap = false,
   onClick,
 }) {
   const isRed = card.suit === 'H' || card.suit === 'D';
@@ -27,6 +28,7 @@ export default function PlayingCard({
     dimmed ? 'dimmed' : '',
     compact ? 'compact' : '',
     highlightSeven ? 'seven-anchor' : '',
+    suitGap ? 'suit-gap' : '',
   ]
     .filter(Boolean)
     .join(' ');

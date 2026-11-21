@@ -1,4 +1,13 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import PlayingCard, { formatRank } from './PlayingCard.jsx';
+import {
+  isMuted,
+  setMuted,
+  playCardSound,
+  playPassSound,
+  playTurnSound,
+  playWinSound,
+} from '../sound.js';
 
 const TABLE_SUITS = [
   { key: 'H', symbol: '♥', red: true },
@@ -8,6 +17,27 @@ const TABLE_SUITS = [
 ];
 
 const REACTIONS = ['😂', '🔥', '😭', '👏', '🫣'];
+
+function sortHandAlternating(hand) {
+  const bySuit = { H: [], D: [], S: [], C: [] };
+  hand.forEach((c) => bySuit[c.suit]?.push(c));
+  Object.values(bySuit).forEach((arr) => arr.sort((a, b) => a.rank - b.rank));
+
+  const reds = ['H', 'D'].filter((s) => bySuit[s].length > 0);
+  const blacks = ['S', 'C'].filter((s) => bySuit[s].length > 0);
+
+  const order = [];
+  let pickRed = reds.length > blacks.length;
+  while (reds.length > 0 || blacks.length > 0) {
+    if (pickRed && reds.length > 0) order.push(reds.shift());
+    else if (!pickRed && blacks.length > 0) order.push(blacks.shift());
+    else if (reds.length > 0) order.push(reds.shift());
+    else if (blacks.length > 0) order.push(blacks.shift());
+    pickRed = !pickRed;
+  }
+
+  return order.flatMap((s) => bySuit[s]);
+}
 
 export default function BadaamSaatTable({
   room,
@@ -24,6 +54,37 @@ export default function BadaamSaatTable({
   const isMyTurn = game.turnPlayerId === playerId;
   const validSet = new Set(game.validMoveIds);
   const currentTurnPlayer = room.players.find((p) => p.id === game.turnPlayerId);
+  const [muted, setMutedState] = useState(isMuted);
+
+  const sortedHand = useMemo(() => sortHandAlternating(game.myHand), [game.myHand]);
+
+  const prevActionKey = useRef('');
+  const prevTurnRef = useRef(false);
+
+  useEffect(() => {
+    const actionKey = `${game.roundNumber}|${game.lastAction?.text}|${game.turnPlayerId}`;
+    if (prevActionKey.current && prevActionKey.current !== actionKey) {
+      if (game.lastAction?.type === 'play') playCardSound();
+      else if (game.lastAction?.type === 'pass') playPassSound();
+      else if (game.lastAction?.type === 'win') playWinSound();
+    }
+    prevActionKey.current = actionKey;
+  }, [game.roundNumber, game.lastAction, game.turnPlayerId]);
+
+  useEffect(() => {
+    if (isMyTurn && !prevTurnRef.current && !game.winnerId) {
+      const t = setTimeout(() => playTurnSound(), 140);
+      prevTurnRef.current = true;
+      return () => clearTimeout(t);
+    }
+    prevTurnRef.current = isMyTurn;
+  }, [isMyTurn, game.winnerId]);
+
+  const toggleMute = () => {
+    const next = !muted;
+    setMuted(next);
+    setMutedState(next);
+  };
 
   return (
     <div className="table-shell">
@@ -31,6 +92,9 @@ export default function BadaamSaatTable({
         <div className="top-meta">
           <span className="pill">Room {room.code}</span>
           <span className="pill">Round {game.roundNumber}</span>
+          <button className="btn btn-ghost btn-xs" onClick={toggleMute}>
+            {muted ? '🔇 Muted' : '🔊 Sound'}
+          </button>
           {isHost && (
             <button className="btn btn-ghost btn-xs" onClick={onBackToLobby}>
               Lobby
@@ -80,13 +144,15 @@ export default function BadaamSaatTable({
               for (let r = 6; r >= lane.low; r--) lowerRanks.push(r);
             }
 
-            const canPlaySeven =
-              isMyTurn && validSet.has(`${suit.key}-7`);
+            const canPlaySeven = isMyTurn && validSet.has(`${suit.key}-7`);
             const nextHighRank = lane && lane.high < 13 ? lane.high + 1 : null;
             const nextLowRank = lane && lane.low > 1 ? lane.low - 1 : null;
 
             return (
-              <div key={suit.key} className="suit-column">
+              <div
+                key={suit.key}
+                className={`suit-column ${suit.red ? 'red-col' : 'black-col'}`}
+              >
                 <div className={`suit-header ${suit.red ? 'red' : 'black'}`}>
                   {suit.symbol}
                 </div>
@@ -186,14 +252,16 @@ export default function BadaamSaatTable({
 
         <div className="hand-scroll">
           <div className="hand-cards">
-            {game.myHand.map((card) => {
+            {sortedHand.map((card, idx) => {
               const playable = isMyTurn && validSet.has(card.id);
+              const suitGap = idx > 0 && sortedHand[idx - 1].suit !== card.suit;
               return (
                 <PlayingCard
                   key={card.id}
                   card={card}
                   playable={playable}
                   dimmed={isMyTurn && !playable}
+                  suitGap={suitGap}
                   onClick={() => onPlayCard(card.id)}
                 />
               );

@@ -26,6 +26,14 @@ body {
   padding: 16px;
 }
 
+.home-stack {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .panel {
   width: 100%;
   max-width: 440px;
@@ -35,6 +43,47 @@ body {
   padding: 24px;
   backdrop-filter: blur(12px);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+}
+
+.history-panel {
+  padding: 16px 20px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.history-item {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.history-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+  color: #f8fafc;
+}
+
+.history-top span {
+  color: #94a3b8;
+}
+
+.history-scores {
+  color: #cbd5e1;
 }
 
 .brand-badge {
@@ -419,11 +468,21 @@ h1, h2 {
   min-height: 270px;
 }
 
+.suit-column.red-col {
+  background: rgba(127, 29, 29, 0.16);
+  border-color: rgba(248, 113, 113, 0.22);
+}
+
+.suit-column.black-col {
+  background: rgba(15, 23, 42, 0.28);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
 .suit-header {
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 6px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -483,16 +542,23 @@ h1, h2 {
 }
 
 .playing-card {
-  background: #ffffff;
   border-radius: 10px;
-  border: 1px solid #cbd5e1;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
   user-select: none;
   position: relative;
 }
 
-.playing-card.red { color: #dc2626; }
-.playing-card.black { color: #0f172a; }
+.playing-card.red {
+  color: #dc2626;
+  background: #fff5f5;
+  border: 1.5px solid #fca5a5;
+}
+
+.playing-card.black {
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1.5px solid #94a3b8;
+}
 
 .playing-card.compact {
   width: 58px;
@@ -567,7 +633,7 @@ h1, h2 {
   display: flex;
   justify-content: center;
   min-width: max-content;
-  gap: 6px;
+  gap: 5px;
   padding: 0 8px 4px;
 }
 
@@ -579,6 +645,10 @@ h1, h2 {
   flex-direction: column;
   justify-content: space-between;
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.hand-cards .playing-card.suit-gap {
+  margin-left: 10px;
 }
 
 .card-top {
@@ -599,7 +669,7 @@ h1, h2 {
   cursor: pointer;
   transform: translateY(-8px);
   border: 2px solid var(--emerald);
-  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.45);
+  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.5);
 }
 
 .playing-card.playable:hover {
@@ -607,7 +677,7 @@ h1, h2 {
 }
 
 .playing-card.dimmed {
-  opacity: 0.45;
+  opacity: 0.48;
 }
 
 .modal-backdrop {
